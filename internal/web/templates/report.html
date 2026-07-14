@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Drift Report — {{.Report.ScanID}}</title>
+  <style>
+    :root { --bg:#0f172a; --card:#1e293b; --fg:#e2e8f0; --muted:#94a3b8; --accent:#38bdf8; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+           background:var(--bg); color:var(--fg); padding:2rem; }
+    a { color:var(--accent); text-decoration:none; }
+    h1 { font-size:1.4rem; }
+    .sub { color:var(--muted); margin:0.5rem 0 1.5rem; }
+    .summary { display:flex; gap:0.6rem; flex-wrap:wrap; margin-bottom:1.5rem; }
+    .pill { padding:0.2rem 0.7rem; border-radius:999px; font-size:0.85rem; background:#334155; }
+    table { width:100%; border-collapse:collapse; background:var(--card); border-radius:10px; overflow:hidden; }
+    th, td { text-align:left; padding:0.6rem 0.8rem; border-bottom:1px solid #334155; font-size:0.9rem; }
+    th { background:#0b1220; color:var(--muted); text-transform:uppercase; font-size:0.72rem; letter-spacing:0.04em; }
+    .dt-deleted { color:#fca5a5; }
+    .dt-modified { color:#fcd34d; }
+    .dt-tag_change { color:#93c5fd; }
+    .dt-orphaned { color:#f0abfc; }
+    code { background:#0b1220; padding:0.1rem 0.35rem; border-radius:4px; }
+    .none { color:var(--muted); }
+  </style>
+</head>
+<body>
+  <p><a href="/">← All scans</a></p>
+  <h1>Drift Report {{.Report.ScanID}}</h1>
+  <div class="sub">
+    {{.Report.StartedAt.Format "2006-01-02 15:04:05"}} ·
+    {{.Report.DurationMs}} ms ·
+    {{.Report.ResourceCount}} resources scanned ·
+    {{.Report.DriftCount}} drift detected
+  </div>
+
+  <div class="summary">
+    {{if .Report.Summary.deleted}}<span class="pill dt-deleted">deleted: {{.Report.Summary.deleted}}</span>{{end}}
+    {{if .Report.Summary.modified}}<span class="pill dt-modified">modified: {{.Report.Summary.modified}}</span>{{end}}
+    {{if .Report.Summary.tag_change}}<span class="pill dt-tag_change">tag change: {{.Report.Summary.tag_change}}</span>{{end}}
+    {{if .Report.Summary.orphaned}}<span class="pill dt-orphaned">orphaned: {{.Report.Summary.orphaned}}</span>{{end}}
+    {{if eq .Report.DriftCount 0}}<span class="pill">no drift</span>{{end}}
+  </div>
+
+  {{if .Report.Items}}
+  <table>
+    <thead>
+      <tr><th>Type</th><th>Name</th><th>ID</th><th>Drift</th><th>Detail</th><th>Expected → Actual</th></tr>
+    </thead>
+    <tbody>
+      {{range .Report.Items}}
+      <tr>
+        <td>{{.Type}}</td>
+        <td>{{.Name}}</td>
+        <td><code>{{.ID}}</code></td>
+        <td class="dt-{{.DriftType}}">{{.DriftType}}</td>
+        <td>{{if .Attribute}}<code>{{.Attribute}}</code> — {{end}}{{.Message}}</td>
+        <td><code>{{.Expected}}</code> → <code>{{.Actual}}</code></td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{else}}
+  <p class="none">No drift detected. Infrastructure matches Terraform state.</p>
+  {{end}}
+</body>
+</html>

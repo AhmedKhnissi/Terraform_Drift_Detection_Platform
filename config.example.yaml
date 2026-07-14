@@ -1,0 +1,28 @@
+# Drift detection configuration. All fields are optional; sensible defaults apply.
+
+aws:
+  region: us-east-1
+  # Shared AWS CLI profile to use (optional).
+  profile: default
+  # Inline static credentials (optional; otherwise the default credential chain is used).
+  # access_key_id: AKIA...
+  # secret_access_key: ...
+
+state:
+  # Local path, file:// path, or s3://bucket/key remote backend.
+  source: ./terraform.tfstate
+
+drift:
+  compare_attributes: true
+  compare_tags: true
+  detect_orphans: false
+
+schedule:
+  # Cron expression for recurring scans, e.g. "*/15 * * * *". Empty = off.
+  spec: ""
+
+storage:
+  path: ./driftdetect.db
+
+web:
+  addr: ":8080"

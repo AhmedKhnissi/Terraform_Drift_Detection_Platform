@@ -1,0 +1,11 @@
+# Build artifacts
+/driftdetect
+driftdetect.exe
+
+# Local state / storage
+*.db
+terraform.tfstate
+terraform.tfstate.backup
+
+# Local config with secrets
+config.yaml
