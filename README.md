@@ -30,10 +30,17 @@ provider interface so additional clouds and resource types drop in cleanly.
 ## Install
 
 ```bash
+go mod tidy          # resolve dependencies (aws-sdk-go-v2, cobra, yaml, ...)
 go build -o driftdetect .
 ```
 
-(Requires Go 1.22+.)
+Requires Go 1.25+ (dependencies are pinned in `go.mod` / `go.sum`; `go mod tidy`
+only needs network if those drift).
+
+> The Terraform working directory `.terraform/` (downloaded provider binaries,
+> including a ~700 MB `terraform-provider-aws` executable) is gitignored — never
+> commit it, or pushes to GitHub will be rejected for exceeding the 100 MB file
+> limit.
 
 ## Configure
 
@@ -82,6 +89,11 @@ driftdetect scan --save
 driftdetect scan --out report.json
 ```
 
+Results are available in more than just the terminal: full per-finding detail
+(expected vs. actual, attribute, message) is in the `--format json` output, and
+saved scans (`--save`) are browsable in the web dashboard and via the `history`
+/ `report` commands below.
+
 ### View history & reports
 
 ```bash
@@ -113,6 +125,72 @@ driftdetect schedule --every 15m
 # Raw cron
 driftdetect schedule --spec "0 * * * *"
 ```
+
+## Example: detect drift on an S3 bucket
+
+This repository ships a `main.tf` that provisions a demo bucket
+(`drift-demo-<account-id>`) with versioning, SSE (AES256), and a public-access
+block. Drift is detected **passively** — no `terraform plan`/`apply` — by
+comparing Terraform **state** against the live AWS API.
+
+1. Create the infrastructure and the state file (credentials come from the AWS
+   default credential chain, `~/.aws/credentials`, profile `default`):
+
+   ```bash
+   terraform init
+   terraform apply
+   ```
+
+2. Scan for drift. The detector reads `./terraform.tfstate` (overridable via
+   `state.source` in `config.yaml` or `--state`) and queries AWS directly:
+
+   ```bash
+   driftdetect scan
+   ```
+
+   Right after `apply` the bucket matches state exactly — **zero drift**:
+
+   ```
+   Resources scanned: 1   Drift detected: 0
+   Summary:
+     Missing resources in cloud (deleted): 0
+     Extra resources in cloud (orphaned):   0
+     Attribute changes (modified):          0
+     Tag changes:                           0
+     Total findings:                        0
+   No drift detected. Infrastructure matches Terraform state.
+   ```
+
+3. Introduce drift in the AWS console — e.g. add a tag `test = ahmed` to the
+   bucket — then scan again:
+
+   ```
+   Scan 3fed2261ded94ba3  @ 2026-07-15 19:28:30  (780 ms)
+   Resources scanned: 1   Drift detected: 1
+   Summary:
+     Missing resources in cloud (deleted): 0
+     Extra resources in cloud (orphaned):   0
+     Attribute changes (modified):          0
+     Tag changes:                           1
+     Total findings:                        1
+   TYPE           NAME        ID                       DRIFT       DETAIL            EXPECTED -> ACTUAL
+   aws_s3_bucket  drift_demo  drift-demo-796973496507  tag_change  tag "test" added  <nil> -> ahmed
+   ```
+
+   The summary reports, per category:
+   - **Missing resources in cloud** (`deleted`) — declared in state but gone from AWS.
+   - **Extra resources in cloud** (`orphaned`) — in AWS but not declared in state
+     (only counted when `drift.detect_orphans: true`).
+   - **Attribute changes** (`modified`) — a compared attribute changed value.
+   - **Tag changes** — a tag was added, removed, or changed.
+   - **Total findings** — the total number of drift items.
+
+> Note: the demo bucket is compared by **tags** only. Versioning and encryption
+> are configured through dedicated `aws_s3_bucket_*` resources that this build
+> does not yet fetch, so their changes are not reported as drift unless the S3
+> fetcher is extended. Resource types without a registered fetcher (e.g.
+> `aws_s3_bucket_versioning`, `aws_s3_bucket_server_side_encryption_configuration`,
+> `aws_s3_bucket_public_access_block`) are ignored, not reported as deletions.
 
 ## Architecture
 
