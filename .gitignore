@@ -9,3 +9,6 @@ terraform.tfstate.backup
 
 # Local config with secrets
 config.yaml
+
+# Terraform working directory (downloaded providers, including large binaries)
+.terraform/
