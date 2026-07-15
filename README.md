@@ -234,7 +234,7 @@ Implement `cloud.CloudProvider` (and internal `ResourceFetcher`s) the same way
 `internal/cloud/aws` does, then wire it into the command layer in
 `cmd/driftdetect/app.go`.
 
-## Limitations (first build)
+## Limitations 
 
 - AWS only; Azure/GCP are future work behind the same interface.
 - No authentication on the web dashboard (assume trusted network / localhost).
