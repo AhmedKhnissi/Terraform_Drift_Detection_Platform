@@ -14,11 +14,11 @@ func RenderTable(w io.Writer, report model.DriftReport) {
 	fmt.Fprintf(w, "Scan %s  @ %s  (%d ms)\n", report.ScanID, report.StartedAt.Format("2006-01-02 15:04:05"), report.DurationMs)
 	fmt.Fprintf(w, "Resources scanned: %d   Drift detected: %d\n", report.ResourceCount, report.DriftCount)
 	fmt.Fprintln(w, "Summary:")
-	for _, dt := range model.AllDriftTypes {
-		if n, ok := report.Summary[dt]; ok && n > 0 {
-			fmt.Fprintf(w, "  %-12s %d\n", dt, n)
-		}
-	}
+	fmt.Fprintf(w, "  %-36s %d\n", "Missing resources in cloud (deleted):", report.Summary[model.DriftDeleted])
+	fmt.Fprintf(w, "  %-36s %d\n", "Extra resources in cloud (orphaned):", report.Summary[model.DriftOrphaned])
+	fmt.Fprintf(w, "  %-36s %d\n", "Attribute changes (modified):", report.Summary[model.DriftModified])
+	fmt.Fprintf(w, "  %-36s %d\n", "Tag changes:", report.Summary[model.DriftTagChange])
+	fmt.Fprintf(w, "  %-36s %d\n", "Total findings:", report.DriftCount)
 	if len(report.Items) == 0 {
 		fmt.Fprintln(w, "No drift detected. Infrastructure matches Terraform state.")
 		return
