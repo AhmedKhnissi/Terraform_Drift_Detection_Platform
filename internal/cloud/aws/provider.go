@@ -65,6 +65,17 @@ func LoadConfig(ctx context.Context, c appconfig.AWSConfig) (aws.Config, error) 
 // Name returns the provider identifier.
 func (p *AWSProvider) Name() string { return "aws" }
 
+// Supports reports whether this provider has a registered fetcher for the
+// resource's type, so the engine can ignore unsupported resource types rather
+// than reporting them as drift.
+func (p *AWSProvider) Supports(rs model.ResourceState) bool {
+	if rs.Provider != "aws" {
+		return false
+	}
+	_, ok := p.registry[rs.Type]
+	return ok
+}
+
 // Fetch returns the live state of every declared AWS resource this provider
 // understands. Unknown resource types are skipped; resources that no longer
 // exist in AWS surface as drift (deletion) via the comparator, not as errors.

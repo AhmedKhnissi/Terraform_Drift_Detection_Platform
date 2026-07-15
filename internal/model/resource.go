@@ -78,7 +78,7 @@ type DriftReport struct {
 	ResourceCount int            `json:"resource_count"`
 	DriftCount    int            `json:"drift_count"`
 	Items         []DriftItem    `json:"items"`
-	Summary       map[string]int `json:"summary"`
+	Summary       map[DriftType]int `json:"summary"`
 }
 
 // ScanSummary is a lightweight view of a persisted scan, used for listing.

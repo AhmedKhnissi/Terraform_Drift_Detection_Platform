@@ -27,6 +27,14 @@ func (f *rdsInstanceFetcher) Fetch(ctx context.Context, exp model.ResourceState)
 		return model.ResourceState{}, cloud.ErrNotFound
 	}
 	db := out.DBInstances[0]
+	var tags map[string]string
+	if db.DBInstanceArn != nil {
+		if tOut, tErr := f.client.ListTagsForResource(ctx, &rds.ListTagsForResourceInput{
+			ResourceName: db.DBInstanceArn,
+		}); tErr == nil {
+			tags = tagsToMap(tOut.TagList)
+		}
+	}
 	return model.ResourceState{
 		Provider: "aws",
 		Type:     exp.Type,
@@ -38,6 +46,6 @@ func (f *rdsInstanceFetcher) Fetch(ctx context.Context, exp model.ResourceState)
 			"allocated_storage": aws.ToInt32(db.AllocatedStorage),
 			"multi_az":         aws.ToBool(db.MultiAZ),
 		},
-		Tags: tagsToMap(db.Tags),
+		Tags: tags,
 	}, nil
 }

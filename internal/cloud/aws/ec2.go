@@ -70,9 +70,8 @@ func (f *ec2VPCFetcher) Fetch(ctx context.Context, exp model.ResourceState) (mod
 		Name:     exp.Name,
 		ID:       exp.ID,
 		Attributes: map[string]interface{}{
-			"cidr_block":        aws.ToString(v.CidrBlock),
-			"instance_tenancy":  string(v.Tenancy),
-			"enable_dns_support": aws.ToBool(v.EnableDnsSupport),
+			"cidr_block":       aws.ToString(v.CidrBlock),
+			"instance_tenancy": string(v.InstanceTenancy),
 		},
 		Tags: tagsToMap(v.Tags),
 	}, nil

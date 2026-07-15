@@ -2,6 +2,7 @@ package aws
 
 import (
 	"errors"
+	"reflect"
 	"strings"
 
 	"github.com/aws/smithy-go"
@@ -13,21 +14,61 @@ import (
 // here for convenience so fetcher files need not import the parent package.
 type ResourceFetcher = cloud.ResourceFetcher
 
-// tagsToMap normalizes any AWS SDK *Tag slice into a flat map. All AWS service
-// tag types expose GetKey()/GetValue(), so a single generic helper covers EC2,
-// S3, RDS, and IAM.
-func tagsToMap[T interface {
-	GetKey() string
-	GetValue() string
-}](tags []T) map[string]string {
-	if len(tags) == 0 {
+// tagsToMap normalizes any AWS SDK tag slice into a flat map. The various
+// service Tag types (EC2, S3, RDS, IAM) all expose Key and Value as *string
+// fields; reflecting over them lets a single helper cover every service
+// without importing each one's generated types.
+func tagsToMap(in any) map[string]string {
+	if in == nil {
 		return nil
 	}
-	m := make(map[string]string, len(tags))
-	for _, t := range tags {
-		m[t.GetKey()] = t.GetValue()
+	v := reflect.ValueOf(in)
+	if v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			return nil
+		}
+		v = v.Elem()
+	}
+	if v.Kind() != reflect.Slice && v.Kind() != reflect.Array {
+		return nil
+	}
+	if v.Len() == 0 {
+		return nil
+	}
+	m := make(map[string]string, v.Len())
+	for i := 0; i < v.Len(); i++ {
+		elem := v.Index(i)
+		if elem.Kind() == reflect.Ptr {
+			if elem.IsNil() {
+				continue
+			}
+			elem = elem.Elem()
+		}
+		key := fieldString(elem, "Key")
+		if key == "" {
+			continue
+		}
+		m[key] = fieldString(elem, "Value")
 	}
 	return m
+}
+
+// fieldString reads a *string field (by name) from a struct value, returning
+// "" when the field is absent or nil.
+func fieldString(v reflect.Value, name string) string {
+	f := v.FieldByName(name)
+	if !f.IsValid() {
+		return ""
+	}
+	if f.Kind() == reflect.Ptr {
+		if f.IsNil() {
+			return ""
+		}
+		if s, ok := f.Elem().Interface().(string); ok {
+			return s
+		}
+	}
+	return ""
 }
 
 // isNotFound reports whether an AWS API error means the resource does not

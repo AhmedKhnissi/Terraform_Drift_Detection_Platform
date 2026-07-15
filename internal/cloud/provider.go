@@ -31,4 +31,9 @@ type CloudProvider interface {
 	// this provider knows how to inspect. Resources of unknown types are
 	// skipped (not returned).
 	Fetch(ctx context.Context, expected []model.ResourceState) ([]model.ResourceState, error)
+	// Supports reports whether this provider can inspect the given declared
+	// resource (i.e. it has a fetcher registered for its type). The engine uses
+	// this to ignore resource types the provider cannot inspect, so they are
+	// not falsely reported as drift.
+	Supports(rs model.ResourceState) bool
 }

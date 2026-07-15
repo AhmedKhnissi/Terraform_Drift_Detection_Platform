@@ -31,12 +31,22 @@ func (r *Runner) Run(ctx context.Context) (model.DriftReport, error) {
 		return model.DriftReport{}, err
 	}
 
+	// Only compare resources this provider can actually inspect. Resource types
+	// without a registered fetcher (e.g. aws_s3_bucket_versioning) are ignored
+	// rather than falsely reported as deleted.
+	inspectable := make([]model.ResourceState, 0, len(expected))
+	for _, e := range expected {
+		if r.Provider.Supports(e) {
+			inspectable = append(inspectable, e)
+		}
+	}
+
 	actual, err := r.Provider.Fetch(ctx, expected)
 	if err != nil {
 		return model.DriftReport{}, err
 	}
 
-	report := drift.Compare(expected, actual, r.Options)
+	report := drift.Compare(inspectable, actual, r.Options)
 	report.ScanID = newScanID()
 	report.StartedAt = start
 	report.DurationMs = time.Since(start).Milliseconds()
